@@ -1,9 +1,9 @@
-package com.github.haehnchen.ideaphpstormespend.services
+package de.espend.intellij.services
 
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
-import com.github.haehnchen.ideaphpstormespend.MyBundle
+import de.espend.intellij.MyBundle
 
 @Service(Service.Level.PROJECT)
 class MyProjectService(project: Project) {

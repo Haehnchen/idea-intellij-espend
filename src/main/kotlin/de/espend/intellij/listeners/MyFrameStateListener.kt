@@ -1,4 +1,4 @@
-package com.github.haehnchen.ideaphpstormespend.listeners
+package de.espend.intellij.listeners
 
 import com.intellij.ide.FrameStateListener
 import com.intellij.openapi.diagnostic.thisLogger

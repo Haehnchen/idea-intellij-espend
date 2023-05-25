@@ -1,18 +1,17 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
-<idea-plugin>
-    <id>com.github.haehnchen.ideaphpstormespend</id>
-    <name>idea-phpstorm-espend Template</name>
-    <vendor>haehnchen</vendor>
+<idea-plugin url="https://github.com/Haehnchen/idea-php-symfony2-plugin">
+    <id>de.espend.intellij</id>
+    <name>Foobar</name>
+    <vendor email="daniel@espendiller.net" url="http://espend.de?p=fr.adrienbrault.idea.symfony2plugin">espend_de</vendor>
 
     <depends>com.intellij.modules.platform</depends>
-
-    <resource-bundle>messages.MyBundle</resource-bundle>
+    <depends optional="true" config-file="plugin-php.xml">com.jetbrains.php</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow factoryClass="com.github.haehnchen.ideaphpstormespend.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
+        <toolWindow factoryClass="de.espend.intellij.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
     </extensions>
 
     <applicationListeners>
-        <listener class="com.github.haehnchen.ideaphpstormespend.listeners.MyFrameStateListener" topic="com.intellij.ide.FrameStateListener"/>
+        <listener class="de.espend.intellij.listeners.MyFrameStateListener" topic="com.intellij.ide.FrameStateListener"/>
     </applicationListeners>
 </idea-plugin>

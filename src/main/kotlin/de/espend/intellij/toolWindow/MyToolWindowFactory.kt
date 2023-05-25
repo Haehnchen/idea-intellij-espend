@@ -1,4 +1,4 @@
-package com.github.haehnchen.ideaphpstormespend.toolWindow
+package de.espend.intellij.toolWindow
 
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.thisLogger
@@ -8,8 +8,8 @@ import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.content.ContentFactory
-import com.github.haehnchen.ideaphpstormespend.MyBundle
-import com.github.haehnchen.ideaphpstormespend.services.MyProjectService
+import de.espend.intellij.MyBundle
+import de.espend.intellij.services.MyProjectService
 import javax.swing.JButton
 
 

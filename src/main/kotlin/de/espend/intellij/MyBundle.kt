@@ -1,4 +1,4 @@
-package com.github.haehnchen.ideaphpstormespend
+package de.espend.intellij
 
 import com.intellij.DynamicBundle
 import org.jetbrains.annotations.NonNls
