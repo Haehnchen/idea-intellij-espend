@@ -11,7 +11,9 @@ import com.jetbrains.php.lang.formatter.PhpCodeStyleSettings;
 import com.jetbrains.php.lang.psi.elements.ConstantReference;
 import com.jetbrains.php.lang.psi.elements.FunctionReference;
 import com.jetbrains.php.lang.psi.elements.ParameterList;
+import com.jetbrains.php.lang.psi.elements.PhpTypedElement;
 import com.jetbrains.php.lang.psi.elements.impl.FunctionReferenceImpl;
+import de.espend.intellij.php.completion.dict.AnonymousFunctionWithParameter;
 import de.espend.intellij.php.completion.dict.AnonymousFunction;
 import de.espend.intellij.php.completion.dict.AnonymousFunctionMatch;
 import de.espend.intellij.php.completion.lookupElement.AnonymousFunctionLookupElement;
@@ -54,7 +56,7 @@ public class ClosureArrowCompletionContributor extends CompletionContributor {
                     if (parameter == null) {
                         arrayMap(completionParameters, completionResultSet, parentOfType);
                     } else {
-                        // @TODO: lookup elements needs a filter
+                        arrayMapFiltered(completionParameters, completionResultSet, parameter);
                     }
                 }
             }
@@ -71,17 +73,44 @@ public class ClosureArrowCompletionContributor extends CompletionContributor {
 
             String prefix = completionResultSet.getPrefixMatcher().getPrefix();
             if (prefix.isBlank() || "fn".startsWith(prefix)) {
-                element = new AnonymousFunctionLookupElement(new AnonymousFunction(match, parameter, AnonymousFunction.FunctionTyp.ARROW, false));
+                element = new AnonymousFunctionLookupElement(new AnonymousFunctionWithParameter(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ARROW, false));
             } else if (prefix.isBlank() || "static fn".startsWith(prefix)) {
-                element = new AnonymousFunctionLookupElement(new AnonymousFunction(match, parameter, AnonymousFunction.FunctionTyp.ARROW, true));
+                element = new AnonymousFunctionLookupElement(new AnonymousFunctionWithParameter(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ARROW, true));
             } else if ("function".startsWith(prefix)) {
-                element = new AnonymousFunctionLookupElement(new AnonymousFunction(match, parameter, AnonymousFunction.FunctionTyp.ANONYMOUS, false));
+                element = new AnonymousFunctionLookupElement(new AnonymousFunctionWithParameter(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ANONYMOUS, false));
             } else if ("static function".startsWith(prefix)) {
-                element = new AnonymousFunctionLookupElement(new AnonymousFunction(match, parameter, AnonymousFunction.FunctionTyp.ANONYMOUS, true));
+                element = new AnonymousFunctionLookupElement(new AnonymousFunctionWithParameter(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ANONYMOUS, true));
             }
 
             if (element != null) {
                 completionResultSet.addElement(element);
+            }
+        }
+    }
+
+    private static void arrayMapFiltered(@NotNull CompletionParameters completionParameters, @NotNull CompletionResultSet completionResultSet, @NotNull PsiElement psiElement) {
+        if (psiElement instanceof PhpTypedElement phpTypedElement) {
+            PhpCodeStyleSettings customSettings = CodeStyle.getCustomSettings(completionParameters.getPosition().getContainingFile(), PhpCodeStyleSettings.class);
+
+            for (AnonymousFunctionMatch match : AnonymousFunctionUtil.getAnonymousFunctionMatchesForType(phpTypedElement)) {
+                String parameter = getFunctionParameterFromArgument(customSettings, match);
+
+                AnonymousFunctionLookupElement element = null;
+
+                String prefix = completionResultSet.getPrefixMatcher().getPrefix();
+                if (prefix.isBlank() || "fn".startsWith(prefix)) {
+                    element = new AnonymousFunctionLookupElement(new AnonymousFunction(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ARROW, false));
+                } else if (prefix.isBlank() || "static fn".startsWith(prefix)) {
+                    element = new AnonymousFunctionLookupElement(new AnonymousFunction(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ARROW, true));
+                } else if ("function".startsWith(prefix)) {
+                    element = new AnonymousFunctionLookupElement(new AnonymousFunction(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ANONYMOUS, false));
+                } else if ("static function".startsWith(prefix)) {
+                    element = new AnonymousFunctionLookupElement(new AnonymousFunction(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ANONYMOUS, true));
+                }
+
+                if (element != null) {
+                    completionResultSet.addElement(element);
+                }
             }
         }
     }

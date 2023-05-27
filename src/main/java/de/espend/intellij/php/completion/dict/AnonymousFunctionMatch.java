@@ -11,7 +11,7 @@ public record AnonymousFunctionMatch (
     @NotNull String type,
     int weight,
     @Nullable String reference,
-    @Nullable AnonymousFunction.ReferenceType referenceType,
+    @Nullable AnonymousFunctionWithParameter.ReferenceType referenceType,
 
     @Nullable String parameterArrayReference
 ) {

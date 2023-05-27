@@ -5,7 +5,7 @@ import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.lookup.LookupElementPresentation;
 import com.intellij.util.PlatformIcons;
 import com.jetbrains.php.PhpIcons;
-import de.espend.intellij.php.completion.dict.AnonymousFunction;
+import de.espend.intellij.php.completion.dict.AnonymousFunctionWithParameter;
 import de.espend.intellij.php.completion.insertHandler.AnonymousFunctionInsertHandler;
 import org.jetbrains.annotations.NotNull;
 
@@ -13,17 +13,17 @@ import org.jetbrains.annotations.NotNull;
  * @author Daniel Espendiller <daniel@espendiller.net>
  */
 public class AnonymousFunctionLookupElement extends LookupElement {
-    private final AnonymousFunction anonymousFunction;
+    private final AnonymousFunctionWithParameter anonymousFunctionWithParameter;
 
-    public AnonymousFunctionLookupElement(@NotNull AnonymousFunction anonymousFunction) {
-        this.anonymousFunction = anonymousFunction;
+    public AnonymousFunctionLookupElement(@NotNull AnonymousFunctionWithParameter anonymousFunctionWithParameter) {
+        this.anonymousFunctionWithParameter = anonymousFunctionWithParameter;
     }
 
     @Override
     public void renderElement(@NotNull LookupElementPresentation presentation) {
-        if (anonymousFunction.referenceType() == AnonymousFunction.ReferenceType.METHOD) {
+        if (anonymousFunctionWithParameter.referenceType() == AnonymousFunctionWithParameter.ReferenceType.METHOD) {
             presentation.setIcon(PhpIcons.METHOD);
-        } else if (anonymousFunction.referenceType() == AnonymousFunction.ReferenceType.FIELD) {
+        } else if (anonymousFunctionWithParameter.referenceType() == AnonymousFunctionWithParameter.ReferenceType.FIELD) {
             presentation.setIcon(PhpIcons.FIELD);
         } else {
             presentation.setIcon(PlatformIcons.FUNCTION_ICON);
@@ -38,12 +38,12 @@ public class AnonymousFunctionLookupElement extends LookupElement {
     }
 
     @NotNull
-    public AnonymousFunction getAnonymousFunction() {
-        return anonymousFunction;
+    public AnonymousFunctionWithParameter getAnonymousFunction() {
+        return anonymousFunctionWithParameter;
     }
 
     @Override
     public @NotNull String getLookupString() {
-        return anonymousFunction.toLookupElementString();
+        return anonymousFunctionWithParameter.toLookupElementString();
     }
 }
