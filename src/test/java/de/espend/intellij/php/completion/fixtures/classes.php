@@ -10,6 +10,11 @@ namespace App
         public $cars = [];
 
         /**
+         * @var string[]
+         */
+        public $myIds = [];
+
+        /**
          * @return \App\Foobar[]
          */
         public function getFoobar(): array

@@ -12,12 +12,20 @@ public class ClosureArrowCompletionContributorTest extends ProjectPlatformTestCa
         myFixture.copyFileToProject("classes.php");
     }
 
-    public void testThatArrayMapProvidesCompletiona() {
-        assertCompletionNotContains(
+    public void testThatArrayMapWithParameterScopeProvidesCompletion() {
+        assertCompletionContains(
             "test.php",
-            createArrayMapContent("<caret> , $tests"),
-            "fn(float $price) => $price, $prices",
-            "fn(int $id) => $id, $ids"
+            createArrayMapContent("<caret> , $ids"),
+            "fn(int $id) => $id"
+        );
+    }
+
+    public void testThatArrayMapWithTypedParameterScopeProvidesCompletion() {
+        assertCompletionContains(
+            "test.php",
+            createArrayMapContent("<caret> , $test->cars"),
+            "fn(Foobar $car) => $car",
+            "fn(string $car) => $car->myIds"
         );
     }
 

@@ -8,7 +8,7 @@ import com.intellij.psi.util.PsiTreeUtil;
 import com.jetbrains.php.lang.psi.PhpPsiElementFactory;
 import com.jetbrains.php.lang.psi.elements.FunctionReference;
 import de.espend.intellij.php.PhpElementsUtil;
-import de.espend.intellij.php.completion.dict.AnonymousFunction;
+import de.espend.intellij.php.completion.dict.AnonymousFunctionWithParameter;
 import de.espend.intellij.php.completion.lookupElement.AnonymousFunctionLookupElement;
 import org.jetbrains.annotations.NotNull;
 
@@ -25,27 +25,27 @@ public class AnonymousFunctionInsertHandler implements InsertHandler<LookupEleme
             return;
         }
 
-        AnonymousFunction anonymousFunction = ((AnonymousFunctionLookupElement) item).getAnonymousFunction();
+        AnonymousFunctionWithParameter anonymousFunctionWithParameter = ((AnonymousFunctionLookupElement) item).getAnonymousFunction();
         PsiElement elementAt = context.getFile().findElementAt(context.getEditor().getCaretModel().getOffset());
         if (elementAt == null) {
             return;
         }
 
-        if (anonymousFunction.isTypedClass()) {
-            String string = PhpElementsUtil.insertUseIfNecessary(elementAt, anonymousFunction.type());
+        if (anonymousFunctionWithParameter.isTypedClass()) {
+            String string = PhpElementsUtil.insertUseIfNecessary(elementAt, anonymousFunctionWithParameter.type());
             if (string != null) {
-                anonymousFunction = anonymousFunction.withTypeNewHint(string);
+                anonymousFunctionWithParameter = anonymousFunctionWithParameter.withTypeNewHint(string);
             }
         }
 
-        PsiElement functionText = PhpPsiElementFactory.createFunctionReference(context.getProject(), "f(" + anonymousFunction.toFunction() +");").getParameterList();
+        PsiElement functionText = PhpPsiElementFactory.createFunctionReference(context.getProject(), "f(" + anonymousFunctionWithParameter.toFunction() +");").getParameterList();
 
         FunctionReference parentOfType = PsiTreeUtil.getParentOfType(elementAt, FunctionReference.class);
         parentOfType.addAfter(functionText, parentOfType.getFirstChild().getNextSibling());
 
         int caretOffset = context.getEditor().getCaretModel().getOffset();
 
-        int caretPosition = anonymousFunction.functionTyp() == AnonymousFunction.FunctionTyp.ARROW
+        int caretPosition = anonymousFunctionWithParameter.functionTyp() == AnonymousFunctionWithParameter.FunctionTyp.ARROW
             ? functionText.getText().indexOf(",")
             : functionText.getText().indexOf(";");
 
