@@ -12,10 +12,10 @@ import org.jetbrains.annotations.NotNull;
 /**
  * @author Daniel Espendiller <daniel@espendiller.net>
  */
-public class AnonymousFunctionRightParameterLookupElement extends LookupElement {
+public class AnonymousFunctionWithParameterLookupElement extends LookupElement {
     private final AnonymousFunctionWithParameter anonymousFunctionWithParameter;
 
-    public AnonymousFunctionRightParameterLookupElement(@NotNull AnonymousFunctionWithParameter anonymousFunctionWithParameter) {
+    public AnonymousFunctionWithParameterLookupElement(@NotNull AnonymousFunctionWithParameter anonymousFunctionWithParameter) {
         this.anonymousFunctionWithParameter = anonymousFunctionWithParameter;
     }
 
