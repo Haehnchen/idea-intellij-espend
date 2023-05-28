@@ -21,10 +21,15 @@ import de.espend.intellij.php.completion.utils.AnonymousFunctionUtil;
 import org.apache.commons.lang.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Set;
+
 /**
  * @author Daniel Espendiller <daniel@espendiller.net>
  */
 public class ClosureArrowCompletionContributor extends CompletionContributor {
+    private static final Set<String> LEFT_SIDED_FUNCTIONS = Set.of("array_filter", "usort", "uksort", "uasort", "array_reduce");
+    private static final Set<String> RIGHT_SIDED_FUNCTIONS = Set.of("array_map");
+
     public ClosureArrowCompletionContributor() {
         extend(CompletionType.BASIC, PlatformPatterns.psiElement(), new CompletionProvider<>() {
             @Override
@@ -62,7 +67,7 @@ public class ClosureArrowCompletionContributor extends CompletionContributor {
                 }
 
                 if (constantReference) {
-                    if (parentOfType instanceof FunctionReferenceImpl && "array_map".equals(parentOfType.getName())) {
+                    if (parentOfType instanceof FunctionReferenceImpl && RIGHT_SIDED_FUNCTIONS.contains(parentOfType.getName())) {
                         PsiElement parameter = ((ParameterList) parent1).getParameter(1);
                         if (parameter == null) {
                             arrayMap(completionParameters, completionResultSet, parentOfType);
@@ -73,16 +78,18 @@ public class ClosureArrowCompletionContributor extends CompletionContributor {
                         return;
                     }
 
-                    if (parentOfType instanceof FunctionReferenceImpl && "array_filter".equals(parentOfType.getName())) {
+                    if (parentOfType instanceof FunctionReferenceImpl && LEFT_SIDED_FUNCTIONS.contains(parentOfType.getName())) {
                         PsiElement parameter = ((ParameterList) parent1).getParameter(0);
                         if (parameter != null) {
                             arrayFilterFiltered(completionParameters, completionResultSet, parameter);
                         }
+
+                        return;
                     }
                 }
 
                 if (variable && originalPosition.getNode().getElementType() == PhpTokenTypes.DOLLAR) {
-                    if (parentOfType instanceof FunctionReferenceImpl && "array_filter".equals(parentOfType.getName())) {
+                    if (parentOfType instanceof FunctionReferenceImpl && LEFT_SIDED_FUNCTIONS.contains(parentOfType.getName())) {
                         arrayFilter(completionParameters, completionResultSet, parentOfType);
                     }
                 }
