@@ -10,6 +10,7 @@ import com.jetbrains.php.lang.psi.elements.FunctionReference;
 import de.espend.intellij.php.PhpElementsUtil;
 import de.espend.intellij.php.completion.dict.AnonymousFunctionWithParameter;
 import de.espend.intellij.php.completion.lookupElement.AnonymousFunctionLookupElement;
+import de.espend.intellij.php.completion.lookupElement.AnonymousFunctionRightParameterLookupElement;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -21,11 +22,15 @@ public class AnonymousFunctionInsertHandler implements InsertHandler<LookupEleme
         context.getDocument().deleteString(context.getStartOffset(), context.getTailOffset());
         context.commitDocument();
 
-        if (!(item instanceof AnonymousFunctionLookupElement)) {
-            return;
+        if (item instanceof AnonymousFunctionRightParameterLookupElement element) {
+            withRightParameterInsert(context, element);
+        } else if (item instanceof AnonymousFunctionLookupElement element) {
+            insert(context, element);
         }
+    }
 
-        AnonymousFunctionWithParameter anonymousFunctionWithParameter = ((AnonymousFunctionLookupElement) item).getAnonymousFunction();
+    private static void withRightParameterInsert(@NotNull InsertionContext context, AnonymousFunctionRightParameterLookupElement item) {
+        AnonymousFunctionWithParameter anonymousFunctionWithParameter = item.getAnonymousFunction();
         PsiElement elementAt = context.getFile().findElementAt(context.getEditor().getCaretModel().getOffset());
         if (elementAt == null) {
             return;
@@ -50,5 +55,28 @@ public class AnonymousFunctionInsertHandler implements InsertHandler<LookupEleme
             : functionText.getText().indexOf(";");
 
         context.getEditor().getCaretModel().moveToOffset(caretOffset + caretPosition);
+    }
+
+    private static void insert(@NotNull InsertionContext context, AnonymousFunctionLookupElement item) {
+        AnonymousFunctionWithParameter anonymousFunctionWithParameter = item.getAnonymousFunction();
+        PsiElement elementAt = context.getFile().findElementAt(context.getEditor().getCaretModel().getOffset());
+        if (elementAt == null) {
+            return;
+        }
+
+        if (anonymousFunctionWithParameter.isTypedClass()) {
+            String string = PhpElementsUtil.insertUseIfNecessary(elementAt, anonymousFunctionWithParameter.type());
+            if (string != null) {
+                anonymousFunctionWithParameter = anonymousFunctionWithParameter.withTypeNewHint(string);
+            }
+        }
+
+        PsiElement functionText = PhpPsiElementFactory.createFunctionReference(context.getProject(), "f(" + anonymousFunctionWithParameter.toFunction() +");").getParameterList();
+        FunctionReference parentOfType = PsiTreeUtil.getParentOfType(elementAt, FunctionReference.class);
+        parentOfType.addAfter(functionText, elementAt.getPrevSibling());
+
+        int caretOffset = context.getEditor().getCaretModel().getOffset();
+
+        context.getEditor().getCaretModel().moveToOffset(caretOffset + functionText.getText().length());
     }
 }

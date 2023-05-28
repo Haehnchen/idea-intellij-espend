@@ -73,6 +73,15 @@ public class ClosureArrowCompletionContributorTest extends ProjectPlatformTestCa
             "static fn(Foobar $foobar) => $foobar, $test->cars"
         );
     }
+
+    public void testThatArrayFilterProvidesCompletion() {
+        assertCompletionContains(
+            "test.php",
+            createArrayFilterContent("$prices, <caret>"),
+            "fn(float $price) => $price"
+        );
+    }
+
     public String getTestDataPath() {
         return "src/test/java/de/espend/intellij/php/completion/fixtures";
     }
@@ -93,6 +102,27 @@ public class ClosureArrowCompletionContributorTest extends ProjectPlatformTestCa
             "        \n" +
             "        $test = new Foobar();\n" +
             "        array_map(" + caretScope + ");" +
+            "        \n" +
+            "    }\n" +
+            "}";
+    }
+
+    private String createArrayFilterContent(@NotNull String caretScope) {
+        return "<?php\n" +
+            "namespace Foobar;\n" +
+            "\n" +
+            "use App\\Foobar;\n" +
+            "\n" +
+            "class MyClass\n" +
+            "{\n" +
+            "    public function getFoobar(): void\n" +
+            "    {\n" +
+            "        $items = ['test', 'test2'];\n" +
+            "        $ids = [12, 12];\n" +
+            "        $prices = [12.12, 12.12];\n" +
+            "        \n" +
+            "        $test = new Foobar();\n" +
+            "        array_filter(" + caretScope + ");" +
             "        \n" +
             "    }\n" +
             "}";
