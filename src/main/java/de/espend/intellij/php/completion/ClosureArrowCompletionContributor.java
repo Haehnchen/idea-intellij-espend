@@ -9,16 +9,14 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.ProcessingContext;
 import com.jetbrains.php.lang.formatter.PhpCodeStyleSettings;
-import com.jetbrains.php.lang.psi.elements.ConstantReference;
-import com.jetbrains.php.lang.psi.elements.FunctionReference;
-import com.jetbrains.php.lang.psi.elements.ParameterList;
-import com.jetbrains.php.lang.psi.elements.PhpTypedElement;
+import com.jetbrains.php.lang.lexer.PhpTokenTypes;
+import com.jetbrains.php.lang.psi.elements.*;
 import com.jetbrains.php.lang.psi.elements.impl.FunctionReferenceImpl;
 import de.espend.intellij.php.completion.dict.AnonymousFunctionWithParameter;
 import de.espend.intellij.php.completion.dict.AnonymousFunction;
 import de.espend.intellij.php.completion.dict.AnonymousFunctionMatch;
 import de.espend.intellij.php.completion.lookupElement.AnonymousFunctionLookupElement;
-import de.espend.intellij.php.completion.lookupElement.AnonymousFunctionRightParameterLookupElement;
+import de.espend.intellij.php.completion.lookupElement.AnonymousFunctionWithParameterLookupElement;
 import de.espend.intellij.php.completion.utils.AnonymousFunctionUtil;
 import org.apache.commons.lang.StringUtils;
 import org.jetbrains.annotations.NotNull;
@@ -39,7 +37,17 @@ public class ClosureArrowCompletionContributor extends CompletionContributor {
                 PsiElement position = completionParameters.getPosition();
 
                 PsiElement parent = position.getParent();
-                if (!(parent instanceof ConstantReference)) {
+
+                // @TODO: clean it up after collected all its needed use cases
+
+                // "fo("
+                // "fo(fn"
+                boolean constantReference = parent instanceof ConstantReference;
+
+                // fo($
+                boolean variable = parent instanceof Variable;
+
+                if (!constantReference && !variable) {
                     return;
                 }
 
@@ -53,23 +61,29 @@ public class ClosureArrowCompletionContributor extends CompletionContributor {
                     return;
                 }
 
-                if (parentOfType instanceof FunctionReferenceImpl && "array_map".equals(parentOfType.getName())) {
-                    PsiElement parameter = ((ParameterList) parent1).getParameter(1);
-                    if (parameter == null) {
-                        arrayMap(completionParameters, completionResultSet, parentOfType);
-                    } else {
-                        arrayMapFiltered(completionParameters, completionResultSet, parameter);
+                if (constantReference) {
+                    if (parentOfType instanceof FunctionReferenceImpl && "array_map".equals(parentOfType.getName())) {
+                        PsiElement parameter = ((ParameterList) parent1).getParameter(1);
+                        if (parameter == null) {
+                            arrayMap(completionParameters, completionResultSet, parentOfType);
+                        } else {
+                            arrayMapFiltered(completionParameters, completionResultSet, parameter);
+                        }
+
+                        return;
                     }
 
-                    return;
+                    if (parentOfType instanceof FunctionReferenceImpl && "array_filter".equals(parentOfType.getName())) {
+                        PsiElement parameter = ((ParameterList) parent1).getParameter(0);
+                        if (parameter != null) {
+                            arrayFilterFiltered(completionParameters, completionResultSet, parameter);
+                        }
+                    }
                 }
 
-                if (parentOfType instanceof FunctionReferenceImpl && "array_filter".equals(parentOfType.getName())) {
-                    PsiElement parameter = ((ParameterList) parent1).getParameter(0);
-                    if (parameter == null) {
-                        // @TODO implement
-                    } else {
-                        arrayFilter(completionParameters, completionResultSet, parameter);
+                if (variable && originalPosition.getNode().getElementType() == PhpTokenTypes.DOLLAR) {
+                    if (parentOfType instanceof FunctionReferenceImpl && "array_filter".equals(parentOfType.getName())) {
+                        arrayFilter(completionParameters, completionResultSet, parentOfType);
                     }
                 }
             }
@@ -86,13 +100,13 @@ public class ClosureArrowCompletionContributor extends CompletionContributor {
 
             String prefix = completionResultSet.getPrefixMatcher().getPrefix();
             if (prefix.isBlank() || "fn".startsWith(prefix)) {
-                element = new AnonymousFunctionRightParameterLookupElement(new AnonymousFunctionWithParameter(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ARROW, false));
+                element = new AnonymousFunctionWithParameterLookupElement(new AnonymousFunctionWithParameter(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ARROW, false));
             } else if (prefix.isBlank() || "static fn".startsWith(prefix)) {
-                element = new AnonymousFunctionRightParameterLookupElement(new AnonymousFunctionWithParameter(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ARROW, true));
+                element = new AnonymousFunctionWithParameterLookupElement(new AnonymousFunctionWithParameter(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ARROW, true));
             } else if ("function".startsWith(prefix)) {
-                element = new AnonymousFunctionRightParameterLookupElement(new AnonymousFunctionWithParameter(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ANONYMOUS, false));
+                element = new AnonymousFunctionWithParameterLookupElement(new AnonymousFunctionWithParameter(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ANONYMOUS, false));
             } else if ("static function".startsWith(prefix)) {
-                element = new AnonymousFunctionRightParameterLookupElement(new AnonymousFunctionWithParameter(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ANONYMOUS, true));
+                element = new AnonymousFunctionWithParameterLookupElement(new AnonymousFunctionWithParameter(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ANONYMOUS, true));
             }
 
             if (element != null) {
@@ -101,7 +115,16 @@ public class ClosureArrowCompletionContributor extends CompletionContributor {
         }
     }
 
-    private static void arrayFilter(@NotNull CompletionParameters completionParameters, @NotNull CompletionResultSet completionResultSet, @NotNull PsiElement psiElement) {
+    private static void arrayFilter(@NotNull CompletionParameters completionParameters, @NotNull CompletionResultSet completionResultSet, @NotNull FunctionReference parentOfType) {
+        PhpCodeStyleSettings customSettings = CodeStyle.getCustomSettings(completionParameters.getPosition().getContainingFile(), PhpCodeStyleSettings.class);
+
+        for (AnonymousFunctionMatch match : AnonymousFunctionUtil.getAnonymousFunctionMatchesForArrayMap(completionParameters, parentOfType)) {
+            String parameter = getFunctionParameterFromArgument(customSettings, match);
+            completionResultSet.addElement(new AnonymousFunctionWithParameterLookupElement(new AnonymousFunctionWithParameter(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ARROW, false, true)));
+        }
+    }
+
+    private static void arrayFilterFiltered(@NotNull CompletionParameters completionParameters, @NotNull CompletionResultSet completionResultSet, @NotNull PsiElement psiElement) {
         if (psiElement instanceof PhpTypedElement phpTypedElement) {
             PhpCodeStyleSettings customSettings = CodeStyle.getCustomSettings(completionParameters.getPosition().getContainingFile(), PhpCodeStyleSettings.class);
 
@@ -135,17 +158,17 @@ public class ClosureArrowCompletionContributor extends CompletionContributor {
             for (AnonymousFunctionMatch match : AnonymousFunctionUtil.getAnonymousFunctionMatchesForType(phpTypedElement)) {
                 String parameter = getFunctionParameterFromArgument(customSettings, match);
 
-                AnonymousFunctionRightParameterLookupElement element = null;
+                AnonymousFunctionWithParameterLookupElement element = null;
 
                 String prefix = completionResultSet.getPrefixMatcher().getPrefix();
                 if (prefix.isBlank() || "fn".startsWith(prefix)) {
-                    element = new AnonymousFunctionRightParameterLookupElement(new AnonymousFunction(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ARROW, false));
+                    element = new AnonymousFunctionWithParameterLookupElement(new AnonymousFunction(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ARROW, false));
                 } else if (prefix.isBlank() || "static fn".startsWith(prefix)) {
-                    element = new AnonymousFunctionRightParameterLookupElement(new AnonymousFunction(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ARROW, true));
+                    element = new AnonymousFunctionWithParameterLookupElement(new AnonymousFunction(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ARROW, true));
                 } else if ("function".startsWith(prefix)) {
-                    element = new AnonymousFunctionRightParameterLookupElement(new AnonymousFunction(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ANONYMOUS, false));
+                    element = new AnonymousFunctionWithParameterLookupElement(new AnonymousFunction(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ANONYMOUS, false));
                 } else if ("static function".startsWith(prefix)) {
-                    element = new AnonymousFunctionRightParameterLookupElement(new AnonymousFunction(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ANONYMOUS, true));
+                    element = new AnonymousFunctionWithParameterLookupElement(new AnonymousFunction(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ANONYMOUS, true));
                 }
 
                 if (element != null) {

@@ -74,11 +74,19 @@ public class ClosureArrowCompletionContributorTest extends ProjectPlatformTestCa
         );
     }
 
-    public void testThatArrayFilterProvidesCompletion() {
+    public void testThatArrayFilterAfterLeftParameterProvidesCompletion() {
         assertCompletionContains(
             "test.php",
             createArrayFilterContent("$prices, <caret>"),
             "fn(float $price) => $price"
+        );
+    }
+
+    public void testThatArrayFilterProvidesCompletion() {
+        assertCompletionContains(
+            "test.php",
+            createArrayFilterContent("$<caret>"),
+            "$prices, fn(float $price) => $price"
         );
     }
 

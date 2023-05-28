@@ -10,7 +10,7 @@ import com.jetbrains.php.lang.psi.elements.FunctionReference;
 import de.espend.intellij.php.PhpElementsUtil;
 import de.espend.intellij.php.completion.dict.AnonymousFunctionWithParameter;
 import de.espend.intellij.php.completion.lookupElement.AnonymousFunctionLookupElement;
-import de.espend.intellij.php.completion.lookupElement.AnonymousFunctionRightParameterLookupElement;
+import de.espend.intellij.php.completion.lookupElement.AnonymousFunctionWithParameterLookupElement;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -22,14 +22,14 @@ public class AnonymousFunctionInsertHandler implements InsertHandler<LookupEleme
         context.getDocument().deleteString(context.getStartOffset(), context.getTailOffset());
         context.commitDocument();
 
-        if (item instanceof AnonymousFunctionRightParameterLookupElement element) {
+        if (item instanceof AnonymousFunctionWithParameterLookupElement element) {
             withRightParameterInsert(context, element);
         } else if (item instanceof AnonymousFunctionLookupElement element) {
             insert(context, element);
         }
     }
 
-    private static void withRightParameterInsert(@NotNull InsertionContext context, AnonymousFunctionRightParameterLookupElement item) {
+    private static void withRightParameterInsert(@NotNull InsertionContext context, AnonymousFunctionWithParameterLookupElement item) {
         AnonymousFunctionWithParameter anonymousFunctionWithParameter = item.getAnonymousFunction();
         PsiElement elementAt = context.getFile().findElementAt(context.getEditor().getCaretModel().getOffset());
         if (elementAt == null) {
@@ -50,9 +50,15 @@ public class AnonymousFunctionInsertHandler implements InsertHandler<LookupEleme
 
         int caretOffset = context.getEditor().getCaretModel().getOffset();
 
-        int caretPosition = anonymousFunctionWithParameter.functionTyp() == AnonymousFunctionWithParameter.FunctionTyp.ARROW
-            ? functionText.getText().indexOf(",")
-            : functionText.getText().indexOf(";");
+        int caretPosition;
+
+        if (anonymousFunctionWithParameter.isLeftSide()) {
+            caretPosition = functionText.getText().length();
+        } else {
+            caretPosition = anonymousFunctionWithParameter.functionTyp() == AnonymousFunctionWithParameter.FunctionTyp.ARROW
+                ? functionText.getText().indexOf(",")
+                : functionText.getText().indexOf(";");
+        }
 
         context.getEditor().getCaretModel().moveToOffset(caretOffset + caretPosition);
     }

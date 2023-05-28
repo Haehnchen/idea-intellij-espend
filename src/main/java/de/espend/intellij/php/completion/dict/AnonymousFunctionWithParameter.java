@@ -13,11 +13,14 @@ public class AnonymousFunctionWithParameter {
     private final @NotNull String type;
     private final @NotNull String parameter;
     private final @NotNull String arrayParameter;
+
     private final @NotNull FunctionTyp functionTyp;
     private final boolean isStatic;
     private final @Nullable String reference;
     private final @Nullable ReferenceType referenceType;
     private final @Nullable String parameterArrayReference;
+
+    private boolean leftSide = false;
 
     public AnonymousFunctionWithParameter(
         @NotNull String type,
@@ -27,7 +30,8 @@ public class AnonymousFunctionWithParameter {
         boolean isStatic,
         @Nullable String reference,
         @Nullable ReferenceType referenceType,
-        @Nullable String parameterArrayReference
+        @Nullable String parameterArrayReference,
+        boolean leftSide
     ) {
         this.type = type;
         this.parameter = parameter;
@@ -37,10 +41,15 @@ public class AnonymousFunctionWithParameter {
         this.reference = reference;
         this.referenceType = referenceType;
         this.parameterArrayReference = parameterArrayReference;
+        this.leftSide = leftSide;
     }
 
     public AnonymousFunctionWithParameter(@NotNull AnonymousFunctionMatch match, @NotNull String parameter, @NotNull FunctionTyp functionTyp, boolean isStatic) {
-        this(match.type(), parameter, match.parameterArray(), functionTyp, isStatic, match.reference(), match.referenceType(), match.parameterArrayReference());
+        this(match.type(), parameter, match.parameterArray(), functionTyp, isStatic, match.reference(), match.referenceType(), match.parameterArrayReference(), false);
+    }
+
+    public AnonymousFunctionWithParameter(@NotNull AnonymousFunctionMatch match, @NotNull String parameter, @NotNull FunctionTyp functionTyp, boolean isStatic, boolean leftSide) {
+        this(match.type(), parameter, match.parameterArray(), functionTyp, isStatic, match.reference(), match.referenceType(), match.parameterArrayReference(), leftSide);
     }
 
     public enum ReferenceType {
@@ -58,7 +67,7 @@ public class AnonymousFunctionWithParameter {
     }
 
     public AnonymousFunctionWithParameter withTypeNewHint(@NotNull String string) {
-        return new AnonymousFunctionWithParameter(string, parameter, arrayParameter, functionTyp, isStatic, reference, referenceType, parameterArrayReference);
+        return new AnonymousFunctionWithParameter(string, parameter, arrayParameter, functionTyp, isStatic, reference, referenceType, parameterArrayReference, leftSide);
     }
 
     public String toFunction() {
@@ -68,6 +77,13 @@ public class AnonymousFunctionWithParameter {
         String arrayParameter1 = arrayParameter;
         if (parameterArrayReference != null) {
             arrayParameter1 = parameterArrayReference;
+        }
+
+        if (leftSide) {
+            return switch (functionTyp) {
+                case ARROW -> "$" + arrayParameter1 + ", " + staticPrefix + "fn(" + type + " $" + parameter + ") => $" + parameter + ref;
+                case ANONYMOUS -> "$" + arrayParameter1 + ", " + staticPrefix + "function (" + type + " $" + parameter + ") { return $" + parameter + ref + ";}";
+            };
         }
 
         return switch (functionTyp) {
@@ -89,6 +105,13 @@ public class AnonymousFunctionWithParameter {
         String arrayParameter1 = arrayParameter;
         if (parameterArrayReference != null) {
             arrayParameter1 = parameterArrayReference;
+        }
+
+        if (leftSide) {
+            return switch (functionTyp) {
+                case ARROW -> "$" + arrayParameter1 + ", " + "fn(" + s + " $" + parameter + ") => $" + parameter + ref;
+                case ANONYMOUS -> "$" + arrayParameter1 + ", " + "function(" + s + " $" + parameter + ") => { return $" + parameter + ref + ";}";
+            };
         }
 
         return switch (functionTyp) {
@@ -144,37 +167,7 @@ public class AnonymousFunctionWithParameter {
         return parameterArrayReference;
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == this) return true;
-        if (obj == null || obj.getClass() != this.getClass()) return false;
-        var that = (AnonymousFunctionWithParameter) obj;
-        return Objects.equals(this.type, that.type) &&
-            Objects.equals(this.parameter, that.parameter) &&
-            Objects.equals(this.arrayParameter, that.arrayParameter) &&
-            Objects.equals(this.functionTyp, that.functionTyp) &&
-            this.isStatic == that.isStatic &&
-            Objects.equals(this.reference, that.reference) &&
-            Objects.equals(this.referenceType, that.referenceType) &&
-            Objects.equals(this.parameterArrayReference, that.parameterArrayReference);
+    public boolean isLeftSide() {
+        return leftSide;
     }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(type, parameter, arrayParameter, functionTyp, isStatic, reference, referenceType, parameterArrayReference);
-    }
-
-    @Override
-    public String toString() {
-        return "AnonymousFunction[" +
-            "type=" + type + ", " +
-            "parameter=" + parameter + ", " +
-            "arrayParameter=" + arrayParameter + ", " +
-            "functionTyp=" + functionTyp + ", " +
-            "isStatic=" + isStatic + ", " +
-            "reference=" + reference + ", " +
-            "referenceType=" + referenceType + ", " +
-            "parameterArrayReference=" + parameterArrayReference + ']';
-    }
-
 }
