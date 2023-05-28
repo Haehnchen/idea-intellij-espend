@@ -2,6 +2,7 @@ package de.espend.intellij.php.completion;
 
 import com.intellij.application.options.CodeStyle;
 import com.intellij.codeInsight.completion.*;
+import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.patterns.PlatformPatterns;
 import com.intellij.psi.PsiElement;
@@ -17,6 +18,7 @@ import de.espend.intellij.php.completion.dict.AnonymousFunctionWithParameter;
 import de.espend.intellij.php.completion.dict.AnonymousFunction;
 import de.espend.intellij.php.completion.dict.AnonymousFunctionMatch;
 import de.espend.intellij.php.completion.lookupElement.AnonymousFunctionLookupElement;
+import de.espend.intellij.php.completion.lookupElement.AnonymousFunctionRightParameterLookupElement;
 import de.espend.intellij.php.completion.utils.AnonymousFunctionUtil;
 import org.apache.commons.lang.StringUtils;
 import org.jetbrains.annotations.NotNull;
@@ -58,6 +60,17 @@ public class ClosureArrowCompletionContributor extends CompletionContributor {
                     } else {
                         arrayMapFiltered(completionParameters, completionResultSet, parameter);
                     }
+
+                    return;
+                }
+
+                if (parentOfType instanceof FunctionReferenceImpl && "array_filter".equals(parentOfType.getName())) {
+                    PsiElement parameter = ((ParameterList) parent1).getParameter(0);
+                    if (parameter == null) {
+                        // @TODO implement
+                    } else {
+                        arrayFilter(completionParameters, completionResultSet, parameter);
+                    }
                 }
             }
         });
@@ -69,21 +82,48 @@ public class ClosureArrowCompletionContributor extends CompletionContributor {
         for (AnonymousFunctionMatch match : AnonymousFunctionUtil.getAnonymousFunctionMatchesForArrayMap(completionParameters, parentOfType)) {
             String parameter = getFunctionParameterFromArgument(customSettings, match);
 
-            AnonymousFunctionLookupElement element = null;
+            LookupElement element = null;
 
             String prefix = completionResultSet.getPrefixMatcher().getPrefix();
             if (prefix.isBlank() || "fn".startsWith(prefix)) {
-                element = new AnonymousFunctionLookupElement(new AnonymousFunctionWithParameter(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ARROW, false));
+                element = new AnonymousFunctionRightParameterLookupElement(new AnonymousFunctionWithParameter(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ARROW, false));
             } else if (prefix.isBlank() || "static fn".startsWith(prefix)) {
-                element = new AnonymousFunctionLookupElement(new AnonymousFunctionWithParameter(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ARROW, true));
+                element = new AnonymousFunctionRightParameterLookupElement(new AnonymousFunctionWithParameter(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ARROW, true));
             } else if ("function".startsWith(prefix)) {
-                element = new AnonymousFunctionLookupElement(new AnonymousFunctionWithParameter(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ANONYMOUS, false));
+                element = new AnonymousFunctionRightParameterLookupElement(new AnonymousFunctionWithParameter(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ANONYMOUS, false));
             } else if ("static function".startsWith(prefix)) {
-                element = new AnonymousFunctionLookupElement(new AnonymousFunctionWithParameter(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ANONYMOUS, true));
+                element = new AnonymousFunctionRightParameterLookupElement(new AnonymousFunctionWithParameter(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ANONYMOUS, true));
             }
 
             if (element != null) {
                 completionResultSet.addElement(element);
+            }
+        }
+    }
+
+    private static void arrayFilter(@NotNull CompletionParameters completionParameters, @NotNull CompletionResultSet completionResultSet, @NotNull PsiElement psiElement) {
+        if (psiElement instanceof PhpTypedElement phpTypedElement) {
+            PhpCodeStyleSettings customSettings = CodeStyle.getCustomSettings(completionParameters.getPosition().getContainingFile(), PhpCodeStyleSettings.class);
+
+            for (AnonymousFunctionMatch match : AnonymousFunctionUtil.getAnonymousFunctionMatchesForType(phpTypedElement)) {
+                String parameter = getFunctionParameterFromArgument(customSettings, match);
+
+                LookupElement element = null;
+
+                String prefix = completionResultSet.getPrefixMatcher().getPrefix();
+                if (prefix.isBlank() || "fn".startsWith(prefix)) {
+                    element = new AnonymousFunctionLookupElement(new AnonymousFunction(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ARROW, false));
+                } else if (prefix.isBlank() || "static fn".startsWith(prefix)) {
+                    element = new AnonymousFunctionLookupElement(new AnonymousFunction(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ARROW, true));
+                } else if ("function".startsWith(prefix)) {
+                    element = new AnonymousFunctionLookupElement(new AnonymousFunction(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ANONYMOUS, false));
+                } else if ("static function".startsWith(prefix)) {
+                    element = new AnonymousFunctionLookupElement(new AnonymousFunction(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ANONYMOUS, true));
+                }
+
+                if (element != null) {
+                    completionResultSet.addElement(element);
+                }
             }
         }
     }
@@ -95,17 +135,17 @@ public class ClosureArrowCompletionContributor extends CompletionContributor {
             for (AnonymousFunctionMatch match : AnonymousFunctionUtil.getAnonymousFunctionMatchesForType(phpTypedElement)) {
                 String parameter = getFunctionParameterFromArgument(customSettings, match);
 
-                AnonymousFunctionLookupElement element = null;
+                AnonymousFunctionRightParameterLookupElement element = null;
 
                 String prefix = completionResultSet.getPrefixMatcher().getPrefix();
                 if (prefix.isBlank() || "fn".startsWith(prefix)) {
-                    element = new AnonymousFunctionLookupElement(new AnonymousFunction(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ARROW, false));
+                    element = new AnonymousFunctionRightParameterLookupElement(new AnonymousFunction(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ARROW, false));
                 } else if (prefix.isBlank() || "static fn".startsWith(prefix)) {
-                    element = new AnonymousFunctionLookupElement(new AnonymousFunction(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ARROW, true));
+                    element = new AnonymousFunctionRightParameterLookupElement(new AnonymousFunction(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ARROW, true));
                 } else if ("function".startsWith(prefix)) {
-                    element = new AnonymousFunctionLookupElement(new AnonymousFunction(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ANONYMOUS, false));
+                    element = new AnonymousFunctionRightParameterLookupElement(new AnonymousFunction(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ANONYMOUS, false));
                 } else if ("static function".startsWith(prefix)) {
-                    element = new AnonymousFunctionLookupElement(new AnonymousFunction(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ANONYMOUS, true));
+                    element = new AnonymousFunctionRightParameterLookupElement(new AnonymousFunction(match, parameter, AnonymousFunctionWithParameter.FunctionTyp.ANONYMOUS, true));
                 }
 
                 if (element != null) {
