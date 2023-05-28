@@ -117,19 +117,32 @@ public class ClosureArrowCompletionContributor extends CompletionContributor {
 
     @NotNull
     private static String getFunctionParameterFromArgument(@NotNull PhpCodeStyleSettings customSettings, @NotNull AnonymousFunctionMatch match) {
-        // items => item
-        String parameter = StringUtil.unpluralize(match.parameterArray());
+        String parameter = null;
 
-        if (parameter == null || parameter.isBlank()) {
-            // Foo\BarFoo => barFoo
-            if (match.type().contains("\\")) {
-                parameter = AnonymousFunctionUtil.getVariableName(customSettings, StringUtils.substringAfterLast(match.type(), "\\"));
-            } else {
-                // last fallback: items => i
-                parameter = match.parameterArray().substring(0, 1);
-            }
+        if (match.type().contains("\\")) {
+            parameter = AnonymousFunctionUtil.getVariableName(customSettings, StringUtils.substringAfterLast(match.type(), "\\"));
         }
 
-        return parameter;
+        if (StringUtils.isNotBlank(parameter)) {
+            return parameter;
+        }
+
+        // items => item
+        parameter = StringUtil.unpluralize(match.parameterArray());
+        if (StringUtils.isNotBlank(parameter)) {
+            return parameter;
+        }
+
+        if (match.parameterArray().length() > 0) {
+            return match.parameterArray().substring(0, 1);
+        }
+
+        // string => s
+        parameter = match.type().replaceAll("(\\W)", "");
+        if (StringUtils.isNotBlank(parameter)) {
+            return parameter;
+        }
+
+        return "i";
     }
 }

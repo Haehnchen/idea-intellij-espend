@@ -24,7 +24,7 @@ public class ClosureArrowCompletionContributorTest extends ProjectPlatformTestCa
         assertCompletionContains(
             "test.php",
             createArrayMapContent("<caret> , $test->cars"),
-            "fn(Foobar $car) => $car",
+            "fn(Foobar $foobar) => $foobar",
             "fn(string $car) => $car->myIds"
         );
     }
@@ -45,7 +45,7 @@ public class ClosureArrowCompletionContributorTest extends ProjectPlatformTestCa
             "fn(int $id) => $id, $ids",
             "fn(string $item) => $item, $items",
             "fn(Foobar $foobar) => $foobar, $test->getFoobar()",
-            "fn(Foobar $car) => $car, $test->cars",
+            "fn(Foobar $foobar) => $foobar, $test->cars",
             "fn(float $price) => $price, $prices"
         );
     }
@@ -55,7 +55,7 @@ public class ClosureArrowCompletionContributorTest extends ProjectPlatformTestCa
             "test.php",
             createArrayMapContent("func<caret>"),
             "function(float $price) => { return $price;}, $prices",
-            "function(Foobar $car) => { return $car;}, $test->cars",
+            "function(Foobar $foobar) => { return $foobar;}, $test->cars",
             "function(Foobar $foobar) => { return $foobar;}, $test->getFoobar()",
             "function(int $id) => { return $id;}, $ids",
             "function(string $item) => { return $item;}, $items"
@@ -63,7 +63,6 @@ public class ClosureArrowCompletionContributorTest extends ProjectPlatformTestCa
     }
 
     public void testThatArrayMapWithStaticProvidesCompletion() {
-
         assertCompletionContains(
             "test.php",
             createArrayMapContent("st<caret>"),
@@ -71,7 +70,7 @@ public class ClosureArrowCompletionContributorTest extends ProjectPlatformTestCa
             "static fn(int $id) => $id, $ids",
             "static fn(string $item) => $item, $items",
             "static fn(Foobar $foobar) => $foobar, $test->getFoobar()",
-            "static fn(Foobar $car) => $car, $test->cars"
+            "static fn(Foobar $foobar) => $foobar, $test->cars"
         );
     }
     public String getTestDataPath() {
