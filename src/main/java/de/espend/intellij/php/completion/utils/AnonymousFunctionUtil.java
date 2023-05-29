@@ -6,10 +6,7 @@ import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.PsiElement;
 import com.jetbrains.php.PhpIndex;
 import com.jetbrains.php.lang.formatter.PhpCodeStyleSettings;
-import com.jetbrains.php.lang.psi.elements.Field;
-import com.jetbrains.php.lang.psi.elements.Method;
-import com.jetbrains.php.lang.psi.elements.PhpClass;
-import com.jetbrains.php.lang.psi.elements.PhpTypedElement;
+import com.jetbrains.php.lang.psi.elements.*;
 import com.jetbrains.php.lang.psi.resolve.types.PhpType;
 import com.jetbrains.php.refactoring.PhpNameStyle;
 import com.jetbrains.php.refactoring.PhpNameUtil;
@@ -22,6 +19,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author Daniel Espendiller <daniel@espendiller.net>
@@ -49,85 +47,54 @@ public class AnonymousFunctionUtil {
             }
 
             for (String type : PhpIndex.getInstance(project).completeType(project, PhpType.from(value), new HashSet<>()).getTypes()) {
-                if (!new PhpType().add(type).filterPrimitives().isEmpty()) {
-                    if (type.startsWith("\\") && !type.endsWith("[]")) {
-                        String substring = type.substring(1);
+                // we only want: \Foo, but not primitives like \string
+                if (!new PhpType().add(type).filterPrimitives().isEmpty() && type.startsWith("\\") && !type.endsWith("[]")) {
+                    String substring = type.substring(1);
 
-                        Collection<PhpClass> anyByFQN = PhpIndex.getInstance(project).getAnyByFQN("\\" + substring);
-                        if (!anyByFQN.isEmpty()) {
-                            PhpClass next = anyByFQN.iterator().next();
-                            for (Field field : next.getFields()) {
-                                if (field.isConstant()) {
-                                    continue;
-                                }
+                    Collection<PhpClass> anyByFQN = PhpIndex.getInstance(project).getAnyByFQN("\\" + substring);
+                    if (anyByFQN.isEmpty()) {
+                        continue;
+                    }
 
-                                if (!"this".equals(entry.getKey()) && !field.getModifier().isPublic()) {
-                                    continue;
-                                }
+                    PhpClass phpClass = anyByFQN.iterator().next();
+                    boolean isThisScope = "this".equals(entry.getKey());
 
-                                String s1 = PhpIndex.getInstance(project).completeType(project, field.getType(), new HashSet<>())
-                                    .getTypes()
-                                    .stream()
-                                    .filter(s -> s.startsWith("\\") && s.endsWith("[]"))
-                                    .findFirst()
-                                    .orElse(null);
+                    Collection<PhpNamedElement> phpNamedElements = new ArrayList<>();
+                    phpNamedElements.addAll(getValidFields(phpClass, isThisScope));
+                    phpNamedElements.addAll(getValidMethods(phpClass, isThisScope));
 
-                                if (s1 != null) {
-                                    String substring2 = s1.substring(0, s1.length() - 2);
-
-                                    Collection<PhpClass> anyByFQN1 = PhpIndex.getInstance(project).getAnyByFQN(substring2);
-                                    if (!anyByFQN1.isEmpty()) {
-                                        PhpClass next1 = anyByFQN1.iterator().next();
-
-                                        int weight = 30;
-                                        matches2.add(new AnonymousFunctionMatch(
-                                            field.getName(),
-                                            next1.getFQN(),
-                                            weight,
-                                            null,
-                                            AnonymousFunctionWithParameter.ReferenceType.FIELD,
-                                            entry.getKey() + "->" + field.getName()
-                                        ));
-                                    }
-                                }
-                            }
-
-                            for (Method field : next.getMethods()) {
-                                if (field.isStatic()) {
-                                    continue;
-                                }
-
-                                if (!"this".equals(entry.getKey()) && !field.getModifier().isPublic()) {
-                                    continue;
-                                }
-
-                                String s1 = PhpIndex.getInstance(project).completeType(project, field.getType(), new HashSet<>())
-                                    .getTypes()
-                                    .stream()
-                                    .filter(s -> s.startsWith("\\") && s.endsWith("[]"))
-                                    .findFirst().orElse(null);
-
-                                if (s1 != null) {
-                                    String substring2 = s1.substring(0, s1.length() - 2);
-
-                                    Collection<PhpClass> anyByFQN1 = PhpIndex.getInstance(project).getAnyByFQN(substring2);
-                                    if (!anyByFQN1.isEmpty()) {
-                                        PhpClass next1 = anyByFQN1.iterator().next();
-
-                                        int weight = 30;
-
-                                        matches2.add(new AnonymousFunctionMatch(
-                                            field.getName(),
-                                            next1.getFQN(),
-                                            weight,
-                                            null,
-                                            AnonymousFunctionWithParameter.ReferenceType.METHOD,
-                                            entry.getKey() + "->" + field.getName() + "()")
-                                        );
-                                    }
-                                }
-                            }
+                    for (PhpNamedElement phpNamedElement : phpNamedElements) {
+                        String resolvedArrayFqn = findFirstArrayClassFqn(project, phpNamedElement.getType());
+                        if (resolvedArrayFqn == null) {
+                            continue;
                         }
+
+                        String resolvedFqn = resolvedArrayFqn.substring(0, resolvedArrayFqn.length() - 2);
+                        Collection<PhpClass> phpClassesResolved = PhpIndex.getInstance(project).getAnyByFQN(resolvedFqn);
+                        if (phpClassesResolved.isEmpty()) {
+                            continue;
+                        }
+
+                        PhpClass phpClassResolved = phpClassesResolved.iterator().next();
+
+                        AnonymousFunctionWithParameter.ReferenceType field1 = phpNamedElement instanceof Field
+                            ? AnonymousFunctionWithParameter.ReferenceType.FIELD
+                            : AnonymousFunctionWithParameter.ReferenceType.METHOD;
+
+                        String parameterArrayReference = entry.getKey() + "->" + phpNamedElement.getName();
+                        if (phpNamedElement instanceof Method) {
+                            parameterArrayReference += "()";
+                        }
+
+                        int weight = 30;
+                        matches2.add(new AnonymousFunctionMatch(
+                            phpNamedElement.getName(),
+                            phpClassResolved.getFQN(),
+                            weight,
+                            null,
+                            field1,
+                            parameterArrayReference
+                        ));
                     }
                 }
 
@@ -145,10 +112,16 @@ public class AnonymousFunctionUtil {
         return matches.stream().sorted(Comparator.comparingInt(AnonymousFunctionMatch::weight).reversed()).toList();
     }
 
-    /**
-     *
-     *
-     */
+    @Nullable
+    private static String findFirstArrayClassFqn(@NotNull Project project, @NotNull PhpType field) {
+        return PhpIndex.getInstance(project)
+            .completeType(project, field, new HashSet<>())
+            .getTypes()
+            .stream()
+            .filter(s -> s.startsWith("\\") && s.endsWith("[]"))
+            .findFirst().orElse(null);
+    }
+
     private static void visitForeignMatchesDirectMatch(@NotNull Project project, List<AnonymousFunctionMatch> matches1, List<AnonymousFunctionMatch> matches3, List<AnonymousFunctionMatch> matches4, @NotNull String key, String type) {
         if (!(type.startsWith("\\") && type.endsWith("[]"))) {
             return;
@@ -165,28 +138,28 @@ public class AnonymousFunctionUtil {
 
         int index = 0;
 
-        PhpClass next = anyByFQN.iterator().next();
+        PhpClass phpClass = anyByFQN.iterator().next();
 
-        for (Field field : next.getFields().stream().filter(field -> !field.isConstant() && field.getModifier().isPublic()).toList()) {
-            PhpType findFirstPrimitives1 = getFindFirstPrimitives(project, field.getType());
-            if (findFirstPrimitives1 == null) {
+        for (Field field : getValidFields(phpClass, false)) {
+            PhpType firstPrimitive = getFindFirstPrimitive(project, field.getType());
+            if (firstPrimitive == null) {
                 continue;
             }
 
             int weight = getWeightForField(field) + index++;
-            matches3.add(new AnonymousFunctionMatch(key, findFirstPrimitives1.toString(), weight, field.getName(), AnonymousFunctionWithParameter.ReferenceType.FIELD, null));
+            matches3.add(new AnonymousFunctionMatch(key, firstPrimitive.toString(), weight, field.getName(), AnonymousFunctionWithParameter.ReferenceType.FIELD, null));
         }
 
         index += 1;
 
-        for (Method field : next.getMethods().stream().filter(method -> !method.isStatic() && method.getModifier().isPublic()).toList()) {
-            PhpType findFirstPrimitives1 = getFindFirstPrimitives(project, field.getType());
-            if (findFirstPrimitives1 == null) {
+        for (Method field : getValidMethods(phpClass, false)) {
+            PhpType firstPrimitive = getFindFirstPrimitive(project, field.getType());
+            if (firstPrimitive == null) {
                 continue;
             }
 
             int weight = getWeightForMethod(field) + index++;
-            matches4.add(new AnonymousFunctionMatch(key, findFirstPrimitives1.toString(), weight, field.getName(), AnonymousFunctionWithParameter.ReferenceType.METHOD, null));
+            matches4.add(new AnonymousFunctionMatch(key, firstPrimitive.toString(), weight, field.getName(), AnonymousFunctionWithParameter.ReferenceType.METHOD, null));
         }
     }
 
@@ -258,7 +231,7 @@ public class AnonymousFunctionUtil {
     }
 
     @Nullable
-    private static PhpType getFindFirstPrimitives(@NotNull Project project, @NotNull PhpType value) {
+    private static PhpType getFindFirstPrimitive(@NotNull Project project, @NotNull PhpType value) {
         for (PhpType phpType : new PhpType[] {PhpType.INT, PhpType.STRING, PhpType.FLOAT}) {
             if (PhpIndex.getInstance(project).completeType(project, value, new HashSet<>()).containsAll(new PhpType().add(phpType.toString() + "[]"))) {
                 return phpType;
@@ -284,5 +257,27 @@ public class AnonymousFunctionUtil {
         }
 
         return strings1.get(0);
+    }
+
+    @NotNull
+    private static Collection<Method> getValidMethods(PhpClass phpClass, boolean isThisScope) {
+        return phpClass.getMethods().stream().filter(method -> {
+            if (method.isStatic()) {
+                return false;
+            }
+
+            return isThisScope || method.getModifier().isPublic();
+        }).collect(Collectors.toList());
+    }
+
+    @NotNull
+    private static Collection<Field> getValidFields(@NotNull PhpClass next, boolean isThisScope) {
+        return next.getFields().stream().filter(field -> {
+            if (field.isConstant()) {
+                return false;
+            }
+
+            return isThisScope || field.getModifier().isPublic();
+        }).collect(Collectors.toList());
     }
 }
