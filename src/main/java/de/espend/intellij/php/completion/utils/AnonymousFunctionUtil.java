@@ -260,7 +260,7 @@ public class AnonymousFunctionUtil {
     }
 
     @NotNull
-    private static Collection<Method> getValidMethods(PhpClass phpClass, boolean isThisScope) {
+    public static Collection<Method> getValidMethods(PhpClass phpClass, boolean isThisScope) {
         return phpClass.getMethods().stream().filter(method -> {
             if (method.isStatic()) {
                 return false;
@@ -271,7 +271,7 @@ public class AnonymousFunctionUtil {
     }
 
     @NotNull
-    private static Collection<Field> getValidFields(@NotNull PhpClass next, boolean isThisScope) {
+    public static Collection<Field> getValidFields(@NotNull PhpClass next, boolean isThisScope) {
         return next.getFields().stream().filter(field -> {
             if (field.isConstant()) {
                 return false;
@@ -279,5 +279,23 @@ public class AnonymousFunctionUtil {
 
             return isThisScope || field.getModifier().isPublic();
         }).collect(Collectors.toList());
+    }
+
+
+    public static Collection<PhpClass> getClassesFromTyp(@NotNull Project project, @NotNull PhpType phpType) {
+        Collection<PhpClass> phpClasses = new HashSet<>();
+
+        for (String type : PhpType.from(phpType).filterPrimitives().getTypes()) {
+            if (type.startsWith("\\") && !type.endsWith("[]")) {
+                Collection<PhpClass> anyByFQN = PhpIndex.getInstance(project).getAnyByFQN(type);
+
+                // first wins
+                if (!anyByFQN.isEmpty()) {
+                    phpClasses.add(anyByFQN.iterator().next());
+                }
+            }
+        }
+
+        return phpClasses;
     }
 }

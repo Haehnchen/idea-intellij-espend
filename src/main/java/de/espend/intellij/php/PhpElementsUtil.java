@@ -34,4 +34,15 @@ public class PhpElementsUtil {
 
         return null;
     }
+
+    public static int getCurrentParameterIndex(PsiElement[] parameters, PsiElement parameter) {
+        int i;
+        for(i = 0; i < parameters.length; i = i + 1) {
+            if(parameters[i].equals(parameter)) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
 }
