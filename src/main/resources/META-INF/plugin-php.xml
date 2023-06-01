@@ -2,5 +2,6 @@
     <extensions defaultExtensionNs="com.intellij">
         <completion.contributor language="PHP" implementationClass="de.espend.intellij.php.completion.ClosureArrowCompletionContributor" order="first"/>
         <completion.contributor language="PHP" implementationClass="de.espend.intellij.php.completion.FunctionParameterCompletionContributor" order="first"/>
+        <completion.contributor language="PHP" implementationClass="de.espend.intellij.php.completion.ForParameterCompletionContributor" order="first"/>
     </extensions>
 </idea-plugin>
